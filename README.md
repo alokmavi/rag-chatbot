@@ -60,10 +60,11 @@ The application is built as a containerized microservice:
 {
   "question": "What are the credit requirements for the Data Structures course?"
 }
+```
 
 **Response:**
 ```json
 {
   "status": "success",
   "answer": "The Data Structures course (BTCS208T) carries 3 credits..."
-}
+} ```
