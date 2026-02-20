@@ -1,4 +1,4 @@
-# Context-Aware Syllabus Chatbot (RAG)
+naclearygy# Context-Aware Syllabus Chatbot (RAG)
 
 A full-stack Retrieval-Augmented Generation (RAG) microservice designed to ingest, embed, and query complex academic syllabus data. The system utilizes a vector-search architecture to provide precise, hallucination-free answers to student queries, referencing specific course codes and credit distributions.
 
@@ -60,11 +60,10 @@ The application is built as a containerized microservice:
 {
   "question": "What are the credit requirements for the Data Structures course?"
 }
-```
 
 **Response:**
 ```json
 {
   "status": "success",
   "answer": "The Data Structures course (BTCS208T) carries 3 credits..."
-} 
+}
