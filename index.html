@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syllabus RAG Interface</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --container-bg: #ffffff;
+            --border-color: #d1d5db;
+            --primary-accent: #2563eb;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+            margin: 0;
+        }
+        .chat-layout {
+            width: 100%;
+            max-width: 800px;
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+        }
+        .chat-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+        .message-log {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .message-node {
+            padding: 0.875rem 1.25rem;
+            border-radius: 6px;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+        /* Added styling for markdown elements like lists */
+        .message-node ul, .message-node ol {
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+        }
+        .node-user {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            align-self: flex-end;
+        }
+        .node-system {
+            background-color: #f9fafb;
+            border: 1px solid var(--border-color);
+            align-self: flex-start;
+        }
+        .node-error {
+            background-color: #fef2f2;
+            border-left: 4px solid #ef4444;
+            color: #991b1b;
+        }
+        .input-mechanism {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 0.75rem;
+        }
+        .query-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .submit-action {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary-accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .submit-action:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <main class="chat-layout">
+        <header class="chat-header">Context-Aware Syllabus Assistant</header>
+        
+        <section id="messageLog" class="message-log">
+            <div class="message-node node-system">System online. Awaiting query parameters.</div>
+        </section>
+
+        <form id="queryForm" class="input-mechanism">
+            <input type="text" id="queryInput" class="query-input" placeholder="Enter syllabus query..." required autocomplete="off">
+            <button type="submit" id="submitButton" class="submit-action">Transmit</button>
+        </form>
+    </main>
+
+    <script>
+        const domElements = {
+            form: document.getElementById('queryForm'),
+            input: document.getElementById('queryInput'),
+            log: document.getElementById('messageLog'),
+            button: document.getElementById('submitButton')
+        };
+
+        const API_ENDPOINT = 'http://localhost:8000/api/v1/ask';
+
+        // 2. UPDATED FUNCTION TO HANDLE HTML OR PLAIN TEXT
+        function appendDOMNode(content, classification, isHtml = false) {
+            const containerNode = document.createElement('div');
+            containerNode.className = `message-node ${classification}`;
+            
+            if (isHtml) {
+                containerNode.innerHTML = content;
+            } else {
+                containerNode.textContent = content;
+            }
+            
+            domElements.log.appendChild(containerNode);
+            domElements.log.scrollTop = domElements.log.scrollHeight;
+        }
+
+        async function executeInferenceRequest(submitEvent) {
+            submitEvent.preventDefault();
+            
+            const rawQuery = domElements.input.value.trim();
+            if (!rawQuery) return;
+
+            domElements.input.value = '';
+            domElements.button.disabled = true;
+            appendDOMNode(rawQuery, 'node-user');
+
+            try {
+                const networkResponse = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: rawQuery })
+                });
+
+                if (!networkResponse.ok) {
+                    throw new Error(`HTTP Fault: ${networkResponse.status}`);
+                }
+
+                const parsedPayload = await networkResponse.json();
+                
+                if (parsedPayload.status === 'success' && parsedPayload.answer) {
+                    // 3. PARSE MARKDOWN TO HTML BEFORE INJECTING
+                    const formattedHtml = marked.parse(parsedPayload.answer);
+                    appendDOMNode(formattedHtml, 'node-system', true);
+                } else {
+                    throw new Error('Malformed payload structure received from backend.');
+                }
+
+            } catch (networkError) {
+                appendDOMNode(`Transmission failure: ${networkError.message}`, 'node-error');
+            } finally {
+                domElements.button.disabled = false;
+                domElements.input.focus();
+            }
+        }
+
+        domElements.form.addEventListener('submit', executeInferenceRequest);
+    </script>
+</body>
+</html>
